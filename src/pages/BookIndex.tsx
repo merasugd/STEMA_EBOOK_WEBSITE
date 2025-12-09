@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import BookCard from '../components/BookCard';
 import type { Book } from '../types';
 import { safeJsonParse } from '../utils/safeJsonParse';
@@ -6,6 +6,7 @@ import { safeJsonParse } from '../utils/safeJsonParse';
 export default function BookIndex() {
   const [books, setBooks] = useState<Record<string, Book>>({});
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     async function loadBooks() {
@@ -47,6 +48,25 @@ export default function BookIndex() {
     }
     loadBooks();
   }, []);
+
+  // Filter books based on search query
+  const filteredBooks = useMemo(() => {
+    if (!searchQuery.trim()) return books;
+
+    const query = searchQuery.toLowerCase();
+    return Object.fromEntries(
+      Object.entries(books).filter(([_, book]) => {
+        return (
+          book.title?.toLowerCase().includes(query) ||
+          book.author?.toLowerCase().includes(query) ||
+          book.description?.toLowerCase().includes(query)
+        );
+      })
+    );
+  }, [books, searchQuery]);
+
+  const displayedBooks = searchQuery ? filteredBooks : books;
+  const hasResults = Object.keys(displayedBooks).length > 0;
 
   if (loading) {
     return (
@@ -96,21 +116,77 @@ export default function BookIndex() {
         </div>
       </section>
 
-      {/* Books Collection – Fixed Width, No Overflow */}
+      {/* Books Collection with Search */}
       <section className="py-20 px-6 bg-black">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <h2 className="text-5xl font-serif text-amber-100 mb-4">Our Collection</h2>
             <p className="text-amber-300 text-lg max-w-2xl mx-auto">
               Selected works contributed by the STEM-A class.
             </p>
           </div>
 
-          {Object.keys(books).length === 0 ? (
-            <p className="text-center text-amber-400 text-2xl py-20">The library is currently being restocked...</p>
+          {/* Search Bar */}
+          <div className="max-w-2xl mx-auto mb-16">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by title, author, or description..."
+                className="w-full px-6 py-5 pl-14 bg-amber-950/40 border border-amber-800/60 rounded-xl text-amber-100 placeholder-amber-500/60 focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-900/30 transition-all duration-300 backdrop-blur-md"
+              />
+              <svg
+                className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-amber-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-5 top-1/2 -translate-y-1/2 text-amber-500 hover:text-amber-300 transition"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {/* Search Results Info */}
+            {searchQuery && (
+              <p className="text-amber-400 text-sm mt-4 text-center">
+                Found <span className="font-bold text-amber-200">{Object.keys(displayedBooks).length}</span> result{Object.keys(displayedBooks).length !== 1 ? 's' : ''} for "<span className="italic">{searchQuery}</span>"
+              </p>
+            )}
+          </div>
+
+          {/* Books Grid */}
+          {!hasResults ? (
+            <div className="text-center py-20">
+              <div className="w-24 h-24 mx-auto mb-8 opacity-30">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-full h-full text-amber-700">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
+              <p className="text-amber-400 text-2xl">
+                {searchQuery 
+                  ? `No books found matching "${searchQuery}"`
+                   
+                  : "The library is currently being restocked..."}
+              </p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10 justify-items-center">
-              {Object.entries(books).map(([id, book]) => (
+              {Object.entries(displayedBooks).map(([id, book]) => (
                 <div
                   key={id}
                   className="w-full max-w-xs transform transition-all duration-500 hover:-translate-y-4 hover:shadow-2xl"
