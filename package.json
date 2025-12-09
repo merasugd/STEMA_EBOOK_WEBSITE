@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "refresh_index": "node public/books/refresh.cjs"
+    "refresh_index": "node public/refresh.cjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.17",

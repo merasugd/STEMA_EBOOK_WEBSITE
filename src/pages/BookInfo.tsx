@@ -7,8 +7,11 @@ export default function BookInfo() {
   const { id } = useParams<{ id: string }>();
   const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
+  const [animate, setAnimate] = useState(false);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
+
     async function loadBook() {
       if (!id) return;
       try {
@@ -23,6 +26,7 @@ export default function BookInfo() {
         setBook(null);
       } finally {
         setLoading(false);
+        setAnimate(true);
       }
     }
     loadBook();
@@ -30,7 +34,7 @@ export default function BookInfo() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center overflow-x-hidden">
         <div className="text-amber-100 text-2xl font-light">Opening the volume...</div>
       </div>
     );
@@ -38,22 +42,22 @@ export default function BookInfo() {
 
   if (!book) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center overflow-x-hidden">
         <div className="text-amber-400 text-3xl">This tome appears to be missing...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-amber-100">
-      
-      
-      <div 
-        className="fixed inset-0 opacity-20 bg-cover bg-center"
-        style={{ backgroundImage: 'url(/images/bg2.jpg)' }}
+    <div className="min-h-screen bg-black text-amber-100 overflow-x-hidden relative">
+      <div
+        className="fixed inset-0 bg-cover bg-center opacity-20 pointer-events-none"
+        style={{ backgroundImage: 'url(/images/bg2.jpg)', backgroundAttachment: 'fixed' }}
       />
 
-      <div className="relative z-10">
+      <div
+        className={`relative z-10 transition-transform duration-700 ease-out opacity-0 ${animate ? 'translate-y-0 opacity-100' : 'translate-y-10'}`}
+      >
         <div className="max-w-5xl mx-auto px-6 py-20">
           <Link
             to="/books"
@@ -67,30 +71,30 @@ export default function BookInfo() {
 
           <div className="grid md:grid-cols-2 gap-16 items-start">
             <div className="flex justify-center md:justify-end">
-              <div className="relative group">
+              <div className="relative group max-w-full">
                 <div className="absolute -inset-4 bg-amber-600/20 rounded-2xl blur-xl group-hover:bg-amber-500/30 transition"></div>
                 <img
                   src={book.coverImage || '/images/placeholder-book.svg'}
                   alt={book.title}
                   onError={(e) => (e.currentTarget.src = '/images/placeholder-book.svg')}
-                  className="relative z-10 w-96 max-w-full shadow-2xl rounded-xl border-8 border-amber-900/60"
+                  className="relative z-10 w-full max-w-sm md:max-w-md shadow-2xl rounded-xl border-8 border-amber-900/60"
                 />
                 <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-amber-700/40"></div>
               </div>
             </div>
 
             <div className="py-8">
-              <h1 className="text-5xl md:text-6xl font-bold text-amber-100 mb-6 leading-tight">
+              <h1 className="text-4xl md:text-5xl font-bold text-amber-100 mb-6 leading-tight">
                 {book.title || 'Untitled'}
               </h1>
 
               {book.author && (
-                <p className="text-2xl text-amber-300 mb-10 italic">
+                <p className="text-xl md:text-2xl text-amber-300 mb-10 italic">
                   by {book.author}
                 </p>
               )}
 
-              <div className="space-y-6 text-lg">
+              <div className="space-y-6 text-base md:text-lg">
                 {book.genre && (
                   <div className="flex items-center gap-4">
                     <span className="text-amber-400 w-32">Genre</span>
