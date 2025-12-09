@@ -10,7 +10,7 @@ export default function BookIndex() {
   useEffect(() => {
     async function loadBooks() {
       try {
-        const indexRes = await fetch('/books/index.json');
+        const indexRes = await fetch('/books/db.json');
         if (!indexRes.ok) throw new Error('Failed to load index');
 
         const files: string[] = await indexRes.json();
