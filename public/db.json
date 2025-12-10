@@ -1,6 +1,9 @@
 [
   "be_mine.json",
+  "colouring_book.json",
+  "discipling_generation.json",
   "el_filibusterismo.json",
+  "essential_english.json",
   "hes_into_her.json",
   "lethal_elemets_of_love.json",
   "oral_communication.json",
@@ -8,11 +11,17 @@
   "stupid_is_forever.json",
   "the_adventures_of_tom_sawyers.json",
   "the_best_laid_plants.json",
+  "the_brethren.json",
   "the_chamber.json",
   "the_little_prince.json",
   "the_partner-the_runaway_jury.json",
   "the_present_series4.json",
+  "the_rainmaker.json",
+  "the_street_lawyer.json",
+  "the_summons.json",
   "the_testament.json",
   "the_van_gogh_cafe.json",
-  "thirty_days_to_better_english.json"
+  "thirty_days_to_better_english.json",
+  "turning_points.json",
+  "you_can_reach_the_top.json"
 ]
