@@ -60,7 +60,7 @@ export default function BookInfo() {
       >
         <div className="max-w-5xl mx-auto px-6 py-20">
           <Link
-            to="/books"
+            to="/bookindex"
             className="inline-flex items-center gap-3 text-amber-300 hover:text-amber-100 transition mb-12 text-lg tracking-wider uppercase"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

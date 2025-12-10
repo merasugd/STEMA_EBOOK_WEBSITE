@@ -15,7 +15,7 @@ export default function Home() {
         “The more that you read, the more things you will know.” — Dr. Seuss
       </p>
 
-      <Link to="/books">
+      <Link to="/bookindex">
         <button className="btn-primary text-2xl px-12 py-6 shadow-xl">
           Open Book Index
         </button>
