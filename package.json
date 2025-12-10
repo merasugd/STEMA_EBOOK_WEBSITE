@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "refresh_index": "node public/refresh.cjs"
+    "index": "node public/refresh.cjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.17",
@@ -17,7 +17,7 @@
     "postcss": "^8.5.6",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.2",
+    "react-router-dom": "^7.10.1",
     "tailwindcss": "^4.1.17"
   },
   "devDependencies": {

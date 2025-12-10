@@ -1,20 +1,48 @@
 import { Link } from 'react-router-dom';
 import type { Book } from '../types';
+import { useState } from 'react';
 
 interface Props {
   book: Book;
   id: string;
 }
 
+interface CoverImageProps {
+  bookId: string;
+  customUrl?: string;
+  title: string;
+  className?: string;
+}
+
+function CoverImage({ bookId, customUrl, title, className = "w-full h-80 object-cover" }: CoverImageProps) {
+  const [imgSrc, setImgSrc] = useState<string>(customUrl || `/images/books/${bookId}.jpg`);
+
+  return (
+    <img
+      src={imgSrc}
+      alt={title}
+      className={className}
+      onError={() => {
+        if (customUrl && imgSrc === customUrl) {
+          setImgSrc(`/images/books/${bookId}.jpg`);
+        } else {
+          setImgSrc("/images/placeholder-book.svg");
+        }
+      }}
+    />
+  );
+}
+
 export default function BookCard({ book, id }: Props) {
   return (
     <Link to={`/book/${id}`} className="block group">
       <div className="aspect-[3/4.5] relative h-full flex flex-col">
-        {book.coverImage ? (
-          <img src={book.coverImage} alt={book.title} className="w-full h-80 object-cover" />
-        ) : (
-          <img src="/images/placeholder-book.svg" alt={book.title} className="w-full h-80 object-cover" />
-        )}
+        <CoverImage
+          bookId={id}
+          customUrl={book.coverImage}
+          title={book.title}
+          className="w-full h-80 object-cover rounded-t-xl"
+        />
         <div className="p-6 flex-1 flex flex-col justify-between">
           <div>
             <h3 className="text-2xl font-serif text-amber-100 line-clamp-2">{book.title || "Untitled"}</h3>

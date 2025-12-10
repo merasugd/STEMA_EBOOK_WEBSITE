@@ -3,6 +3,32 @@ import { useEffect, useState } from 'react';
 import type { Book } from '../types';
 import { safeJsonParse } from '../utils/safeJsonParse';
 
+interface CoverImageProps {
+  bookId: string;
+  customUrl?: string;
+  title: string;
+  className?: string;
+}
+
+function CoverImage({ bookId, customUrl, title, className = "w-full h-80 object-cover" }: CoverImageProps) {
+  const [imgSrc, setImgSrc] = useState<string>(customUrl || `/images/books/${bookId}.jpg`);
+
+  return (
+    <img
+      src={imgSrc}
+      alt={title}
+      className={className}
+      onError={() => {
+        if (customUrl && imgSrc === customUrl) {
+          setImgSrc(`/images/books/${bookId}.jpg`);
+        } else {
+          setImgSrc("/images/placeholder-book.svg");
+        }
+      }}
+    />
+  );
+}
+
 export default function BookInfo() {
   const { id } = useParams<{ id: string }>();
   const [book, setBook] = useState<Book | null>(null);
@@ -73,10 +99,10 @@ export default function BookInfo() {
             <div className="flex justify-center md:justify-end">
               <div className="relative group max-w-full">
                 <div className="absolute -inset-4 bg-amber-600/20 rounded-2xl blur-xl group-hover:bg-amber-500/30 transition"></div>
-                <img
-                  src={book.coverImage || '/images/placeholder-book.svg'}
-                  alt={book.title}
-                  onError={(e) => (e.currentTarget.src = '/images/placeholder-book.svg')}
+                <CoverImage
+                  bookId={id || 'none'}
+                  title={book.title}
+                  customUrl={book.coverImage}
                   className="relative z-10 w-full max-w-sm md:max-w-md shadow-2xl rounded-xl border-8 border-amber-900/60"
                 />
                 <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-amber-700/40"></div>
