@@ -22,7 +22,7 @@ export default function Home() {
       </Link>
 
       <footer className="absolute bottom-8 text-lg">
-        <p>Made by: <strong>Anjo Martin Meras</strong></p>
+        <p>Made by: <strong>Meras and The STEM A</strong></p>
         <p>Project by: <strong>11-STEM-A</strong></p>
       </footer>
     </div>
