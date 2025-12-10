@@ -35,7 +35,7 @@ export default function BookIndex() {
             const id = file.replace('.json', '');
             bookData[id] = book;
           } catch (e) {
-            console.error(`Parse error in ${file}`);
+            console.error(`Parse error in ${file}: ${e}`);
           }
         }
 
