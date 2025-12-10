@@ -1,204 +1,260 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import BookCard from '../components/BookCard';
 import type { Book } from '../types';
 import { safeJsonParse } from '../utils/safeJsonParse';
 
+const PAGE_SIZE = 8;
+
 export default function BookIndex() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+
   const [books, setBooks] = useState<Record<string, Book>>({});
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'default' | 'title' | 'author' | 'sharedBy'>('default');
-  const [selectedContributors, setSelectedContributors] = useState<string[]>([]);
+
+  // State from URL
+  const searchQuery = searchParams.get('q')?.trim() || '';
+  const sortBy = (searchParams.get('sort') as 'default' | 'title' | 'author' | 'sharedBy') || 'default';
+  const rawContributors = searchParams.get('contributors');
+  const selectedContributors = useMemo(() => {
+    if (!rawContributors) return [];
+    try {
+      return JSON.parse(rawContributors);
+    } catch {
+      return [];
+    }
+  }, [rawContributors]);
+
+  const currentPage = Math.max(1, Number(searchParams.get('page')) || 1);
+
   const [showContributorModal, setShowContributorModal] = useState(false);
   const [contributorSearch, setContributorSearch] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
-  const pageSize = 8;
-  const hasRestoredScroll = useRef(false);
+  const hasInitialized = useRef(false);
 
-  // Load books
+  // Load all books
   useEffect(() => {
+    let cancelled = false;
+
     async function loadBooks() {
       try {
-        const indexRes = await fetch('/db.json');
+        const indexRes = await fetch('db.json');
         if (!indexRes.ok) throw new Error('Failed to load index');
         const files: string[] = await indexRes.json();
-        const bookData: Record<string, Book> = {};
 
-        for (const file of files) {
+        const promises = files.map(async (file) => {
           const res = await fetch(`/books/${file}`);
-          if (!res.ok) continue;
+          if (!res.ok) return null;
           const text = await res.text();
-          if (!text.trim()) continue;
-          try {
-            const book: Book = safeJsonParse(text) || {
-              title: "Unknown Title",
-              author: "Unknown Author",
-              description: "",
-              coverImage: "/images/placeholder-book.svg",
-              availability: "unknown",
-            };
-            const id = file.replace('.json', '');
+          if (!text.trim()) return null;
+
+          const book: Book = safeJsonParse(text) ?? {
+            title: 'Unknown Title',
+            author: 'Unknown Author',
+            description: '',
+            coverImage: '/images/placeholder-book.svg',
+            availability: 'unknown',
+          };
+
+          const id = file.replace('.json', '');
+          return [id, book] as const;
+        });
+
+        const results = await Promise.allSettled(promises);
+        if (cancelled) return;
+
+        const bookData: Record<string, Book> = {};
+        results.forEach((r) => {
+          if (r.status === 'fulfilled' && r.value) {
+            const [id, book] = r.value;
             bookData[id] = book;
-          } catch (e) {
-            console.error(`Parse error in ${file}:`, e);
           }
-        }
+        });
+
         setBooks(bookData);
       } catch (err) {
         console.error('Load books error:', err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
+
     loadBooks();
+    return () => { cancelled = true; };
   }, []);
 
-  // Session storage
+  // Sync URL when filters change
   useEffect(() => {
-    const saveState = () => {
-      sessionStorage.setItem('bookIndexScroll', window.scrollY.toString());
-      sessionStorage.setItem('bookIndexPage', currentPage.toString());
-      sessionStorage.setItem('bookIndexSearch', searchQuery);
-      sessionStorage.setItem('bookIndexSort', sortBy);
-      sessionStorage.setItem('bookIndexContributors', JSON.stringify(selectedContributors));
-    };
+    if (loading || hasInitialized.current === false) return;
 
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('a') || target.closest('[href^="/book/"]')) saveState();
-    };
+    const params = new URLSearchParams();
 
-    document.addEventListener('click', handleClick);
-    window.addEventListener('beforeunload', saveState);
-    return () => {
-      document.removeEventListener('click', handleClick);
-      window.removeEventListener('beforeunload', saveState);
-    };
-  }, [currentPage, searchQuery, sortBy, selectedContributors]);
-
-  useEffect(() => {
-    if (loading || hasRestoredScroll.current) return;
-    const savedPage = sessionStorage.getItem('bookIndexPage');
-    const savedSearch = sessionStorage.getItem('bookIndexSearch');
-    const savedSort = sessionStorage.getItem('bookIndexSort');
-    const savedContribs = sessionStorage.getItem('bookIndexContributors');
-
-    if (savedPage) setCurrentPage(Number(savedPage));
-    if (savedSearch) setSearchQuery(savedSearch);
-    if (savedSort) setSortBy(savedSort as any);
-    if (savedContribs) setSelectedContributors(JSON.parse(savedContribs));
-
-    const scrollPos = sessionStorage.getItem('bookIndexScroll');
-    if (scrollPos && Number(scrollPos) > 0) {
-      setTimeout(() => {
-        window.scrollTo(0, Number(scrollPos));
-        hasRestoredScroll.current = true;
-      }, 100);
-    } else {
-      hasRestoredScroll.current = true;
+    if (searchQuery) params.set('q', searchQuery);
+    if (sortBy !== 'default') params.set('sort', sortBy);
+    if (selectedContributors.length > 0) {
+      params.set('contributors', JSON.stringify(selectedContributors));
     }
+    if (currentPage > 1) params.set('page', currentPage.toString());
+
+    // Only update if different to avoid infinite loop
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    const currentUrl = `${window.location.pathname}?${searchParams.toString()}`;
+    if (newUrl !== currentUrl) {
+      setSearchParams(params, { replace: true });
+    }
+  }, [searchQuery, sortBy, selectedContributors, currentPage, loading, searchParams, setSearchParams]);
+
+  // Initial load: mark as initialized after first render
+  useEffect(() => {
+    if (!loading) hasInitialized.current = true;
   }, [loading]);
 
-  useEffect(() => window.scrollTo({ top: 0, behavior: 'smooth' }), [currentPage]);
+  // Scroll restoration on page change
   useEffect(() => {
-    const handleScroll = () => setShowScrollTop(window.scrollY > 500);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    if (!loading) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [currentPage, loading]);
+
+  // Scroll to top button
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 500);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Get contributors
+  // Reset page when filters change
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev);
+        next.delete('page');
+        return next;
+      }, { replace: true });
+    }
+  }, [searchQuery, sortBy, selectedContributors]);
+
   const allContributors = useMemo(() => {
-    const contribs = new Set<string>();
-    Object.values(books).forEach(book => {
-      const name = book.sharedBy?.trim();
-      if (name) contribs.add(name);
-    });
-    return Array.from(contribs).sort((a, b) => a.localeCompare(b));
+    const set = new Set<string>();
+    Object.values(books).forEach(b => b.sharedBy?.trim() && set.add(b.sharedBy.trim()));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [books]);
 
   const filteredContributors = useMemo(() => {
     if (!contributorSearch.trim()) return allContributors;
     const q = contributorSearch.toLowerCase();
-    return allContributors.filter(name => name.toLowerCase().includes(q));
+    return allContributors.filter(c => c.toLowerCase().includes(q));
   }, [allContributors, contributorSearch]);
 
-  // Filtering
   const filteredBooks = useMemo(() => {
-    let list = Object.entries(books);
+    let entries = Object.entries(books);
 
-    if (searchQuery.trim()) {
+    if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      list = list.filter(([, book]) =>
-        `${book.title} ${book.author} ${book.description} ${book.sharedBy || ''}`.toLowerCase().includes(q)
+      entries = entries.filter(([, b]) =>
+        `${b.title} ${b.author} ${b.description} ${b.sharedBy || ''}`.toLowerCase().includes(q)
       );
     }
 
-    if (sortBy !== 'sharedBy' && selectedContributors.length > 0) {
-      list = list.filter(([, book]) => {
-        const name = book.sharedBy?.trim();
+    if (selectedContributors.length > 0 && sortBy !== 'sharedBy') {
+      entries = entries.filter(([, b]) => {
+        const name = b.sharedBy?.trim();
         return name && selectedContributors.includes(name);
       });
     }
 
-    return Object.fromEntries(list);
+    return Object.fromEntries(entries);
   }, [books, searchQuery, selectedContributors, sortBy]);
 
-  // Sorting
-  const bookList = useMemo(() => {
-    let list = Object.entries(filteredBooks);
+  const sortedBookList = useMemo(() => {
+    const list = Object.entries(filteredBooks);
+
     if (sortBy === 'title') list.sort((a, b) => (a[1].title || '').localeCompare(b[1].title || ''));
     else if (sortBy === 'author') list.sort((a, b) => (a[1].author || '').localeCompare(b[1].author || ''));
     else if (sortBy === 'sharedBy') list.sort((a, b) => (a[1].sharedBy || '').localeCompare(b[1].sharedBy || ''));
+
     return list;
   }, [filteredBooks, sortBy]);
 
-  useEffect(() => setCurrentPage(1), [searchQuery, sortBy, selectedContributors]);
-
-  // Pagination logic
-  const {
-    displayedList,
-    currentContributor,
-    totalPages: calculatedTotalPages,
-    contributorList
-  } = useMemo(() => {
+  const paginationData = useMemo(() => {
     if (sortBy !== 'sharedBy') {
-      const start = (currentPage - 1) * pageSize;
-      const end = start + pageSize;
+      const start = (currentPage - 1) * PAGE_SIZE;
       return {
-        displayedList: bookList.slice(start, end),
+        displayed: sortedBookList.slice(start, start + PAGE_SIZE),
         currentContributor: null,
-        totalPages: Math.ceil(bookList.length / pageSize),
-        contributorList: []
+        totalPages: Math.ceil(sortedBookList.length / PAGE_SIZE),
+        contributorList: [] as string[],
       };
     }
 
-    // Sorting
-    const groups = bookList.reduce<Record<string, typeof bookList>>((acc, item) => {
+    const groups: Record<string, typeof sortedBookList> = {};
+    sortedBookList.forEach(item => {
       const key = item[1].sharedBy?.trim() || 'Unknown Contributor';
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(item);
-      return acc;
-    }, {});
+      (groups[key] ||= []).push(item);
+    });
 
-    const sortedContributors = Object.keys(groups)
-      .filter(name => groups[name].length > 0)
+    const contributors = Object.keys(groups)
+      .filter(k => groups[k].length)
       .sort((a, b) => a.localeCompare(b));
 
-    const contributorIndex = Math.max(0, Math.min(currentPage - 1, sortedContributors.length - 1));
-    const currentName = sortedContributors[contributorIndex];
-    const booksByCurrentContributor = groups[currentName] || [];
+    const idx = Math.max(0, Math.min(currentPage - 1, contributors.length - 1));
+    const currentName = contributors[idx] || 'Unknown Contributor';
 
     return {
-      displayedList: booksByCurrentContributor,
+      displayed: groups[currentName] || [],
       currentContributor: currentName,
-      totalPages: sortedContributors.length || 1,
-      contributorList: sortedContributors
+      totalPages: contributors.length || 1,
+      contributorList: contributors,
     };
-  }, [bookList, sortBy, currentPage]);
+  }, [sortedBookList, sortBy, currentPage]);
 
-  const totalPages = calculatedTotalPages;
+  const { displayed, currentContributor, totalPages, contributorList } = paginationData;
+
+  // Handlers
+  const updateSearch = (value: string) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (value.trim()) next.set('q', value.trim());
+      else next.delete('q');
+      next.delete('page');
+      return next;
+    }, { replace: true });
+  };
+
+  const updateSort = (value: typeof sortBy) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (value !== 'default') next.set('sort', value);
+      else next.delete('sort');
+      next.delete('page');
+      return next;
+    }, { replace: true });
+  };
+
+  const updateContributors = (contributors: string[]) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (contributors.length > 0) {
+        next.set('contributors', JSON.stringify(contributors));
+      } else {
+        next.delete('contributors');
+      }
+      next.delete('page');
+      return next;
+    }, { replace: true });
+    setShowContributorModal(false);
+  };
+
+  const goToPage = (page: number) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (page > 1) next.set('page', page.toString());
+      else next.delete('page');
+      return next;
+    }, { replace: true });
+  };
 
   if (loading) {
     return (
@@ -213,15 +269,13 @@ export default function BookIndex() {
 
   return (
     <>
-      {/* Back to Home */}
-      <button onClick={() => window.location.href = '/'} className="fixed top-8 left-8 z-50 flex items-center gap-3 text-amber-300 hover:text-amber-100 transition text-lg tracking-wider uppercase">
+      <button onClick={() => navigate('/')} className="fixed top-8 left-8 z-50 flex items-center gap-3 text-amber-300 hover:text-amber-100 transition text-lg tracking-wider uppercase">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
         Back to Home
       </button>
 
-      {/* Hero */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden bg-black">
         <div className="absolute inset-0 bg-cover bg-center opacity-30" style={{ backgroundImage: 'url(/images/bg1.jpg)', filter: 'sepia(0.5) brightness(0.7)' }} />
         <div className="relative z-10 text-center px-6">
@@ -242,7 +296,6 @@ export default function BookIndex() {
             <p className="text-amber-300 text-lg max-w-2xl mx-auto">Selected works contributed by the STEM-A class.</p>
           </div>
 
-          {/* Search */}
           <div className="max-w-2xl mx-auto mb-10">
             <div className="flex items-center gap-0 border border-amber-800/60 rounded-xl overflow-hidden focus-within:border-amber-500 focus-within:ring-4 focus-within:ring-amber-900/30 transition-all bg-amber-950/40 backdrop-blur-md">
               <div className="pl-5 pr-3 py-5 text-amber-500">
@@ -253,12 +306,12 @@ export default function BookIndex() {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => updateSearch(e.target.value)}
                 placeholder="Search by title, author, contributor..."
                 className="w-full py-5 pr-12 pl-3 bg-transparent text-amber-100 placeholder-amber-500/60 focus:outline-none"
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-amber-500 hover:text-amber-300">
+                <button onClick={() => updateSearch('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-amber-500 hover:text-amber-300">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -267,16 +320,15 @@ export default function BookIndex() {
             </div>
             {searchQuery && (
               <p className="text-amber-400 text-sm mt-4 text-center">
-                Found <span className="font-bold text-amber-200">{bookList.length}</span> result{bookList.length !== 1 ? 's' : ''}
+                Found <span className="font-bold text-amber-200">{sortedBookList.length}</span> result{sortedBookList.length !== 1 ? 's' : ''}
               </p>
             )}
           </div>
 
-          {/* Sort + Contributor Filter Button */}
           <div className="max-w-2xl mx-auto flex gap-4 mb-12">
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={e => updateSort(e.target.value as any)}
               className="flex-1 px-6 py-5 bg-amber-950/40 border border-amber-800/60 rounded-xl text-amber-100 focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-900/30 backdrop-blur-md"
             >
               <option value="default">Sort by Default</option>
@@ -305,8 +357,8 @@ export default function BookIndex() {
 
           {/* Contributor Modal */}
           {showContributorModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setShowContributorModal(false)}>
-              <div className="w-full max-w-lg mx-4 bg-gradient-to-b from-amber-950/90 to-black border border-amber-800/60 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={e => e.target === e.currentTarget && setShowContributorModal(false)}>
+              <div className="w-full max-w-lg mx-4 bg-gradient-to-b from-amber-950/90 to-black border border-amber-800/60 rounded-2xl shadow-2xl overflow-hidden">
                 <div className="p-8">
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="text-2xl font-serif text-amber-100">Filter by Contributor</h3>
@@ -320,7 +372,7 @@ export default function BookIndex() {
                   <input
                     type="text"
                     value={contributorSearch}
-                    onChange={(e) => setContributorSearch(e.target.value)}
+                    onChange={e => setContributorSearch(e.target.value)}
                     placeholder="Search contributors..."
                     className="w-full mb-6 px-5 py-4 bg-amber-950/50 border border-amber-800/60 rounded-xl text-amber-100 placeholder-amber-500/60 focus:outline-none focus:border-amber-500"
                   />
@@ -331,12 +383,11 @@ export default function BookIndex() {
                         <input
                           type="checkbox"
                           checked={selectedContributors.includes(name)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedContributors(prev => [...prev, name]);
-                            } else {
-                              setSelectedContributors(prev => prev.filter(n => n !== name));
-                            }
+                          onChange={e => {
+                            const newList = e.target.checked
+                              ? [...selectedContributors, name]
+                              : selectedContributors.filter((n: any) => n !== name);
+                            updateContributors(newList);
                           }}
                           className="w-5 h-5 text-amber-500 bg-amber-950/50 border-amber-700 rounded focus:ring-amber-500"
                         />
@@ -347,10 +398,7 @@ export default function BookIndex() {
 
                   <div className="flex gap-4 mt-8">
                     <button
-                      onClick={() => {
-                        setSelectedContributors([]);
-                        setShowContributorModal(false);
-                      }}
+                      onClick={() => updateContributors([])}
                       className="flex-1 py-4 border border-amber-700/70 text-amber-300 hover:bg-amber-900/30 rounded-xl transition"
                     >
                       Clear All
@@ -367,7 +415,6 @@ export default function BookIndex() {
             </div>
           )}
 
-          {/* Listing */}
           {sortBy === 'sharedBy' && currentContributor && (
             <div className="text-center mb-12">
               <h3 className="text-4xl font-serif text-amber-200">
@@ -379,14 +426,14 @@ export default function BookIndex() {
             </div>
           )}
 
-          {bookList.length === 0 ? (
+          {sortedBookList.length === 0 ? (
             <div className="text-center py-20">
               <p className="text-amber-400 text-2xl">No books found.</p>
             </div>
           ) : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10 justify-items-center">
-                {displayedList.map(([id, book]) => (
+                {displayed.map(([id, book]) => (
                   <div key={id} className="w-full max-w-xs transform transition-all duration-500 hover:-translate-y-4 hover:shadow-2xl">
                     <div className="bg-gradient-to-b from-amber-950/60 to-amber-900/30 backdrop-blur-md border border-amber-800/40 rounded-xl overflow-hidden shadow-xl hover:shadow-amber-900/30">
                       <BookCard book={book} id={id} />
@@ -399,15 +446,15 @@ export default function BookIndex() {
                 <div className="flex justify-center items-center gap-6 mt-16">
                   <button
                     disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(p => p - 1)}
+                    onClick={() => goToPage(currentPage - 1)}
                     className="px-8 py-3 bg-amber-950/40 border border-amber-800/60 rounded-xl text-amber-100 disabled:opacity-50 hover:bg-amber-900/30 transition"
                   >
-                    {sortBy === 'sharedBy' ? '← Previous Contributor' : '← Previous'}
+                    {sortBy === 'sharedBy' ? 'Previous Contributor' : 'Previous'}
                   </button>
 
                   <span className="text-amber-300 text-lg min-w-[200px] text-center">
                     Page {currentPage} of {totalPages}
-                    {sortBy === 'sharedBy' && contributorList.length > 0 && (
+                    {sortBy === 'sharedBy' && contributorList[currentPage - 1] && (
                       <span className="block text-sm text-amber-400 mt-1">
                         ({contributorList[currentPage - 1]})
                       </span>
@@ -416,10 +463,10 @@ export default function BookIndex() {
 
                   <button
                     disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(p => p + 1)}
+                    onClick={() => goToPage(currentPage + 1)}
                     className="px-8 py-3 bg-amber-950/40 border border-amber-800/60 rounded-xl text-amber-100 disabled:opacity-50 hover:bg-amber-900/30 transition"
                   >
-                    {sortBy === 'sharedBy' ? 'Next Contributor →' : 'Next →'}
+                    {sortBy === 'sharedBy' ? 'Next Contributor' : 'Next'}
                   </button>
                 </div>
               )}
@@ -428,7 +475,6 @@ export default function BookIndex() {
         </div>
       </section>
 
-      {/* Footer & Scroll Top */}
       <footer className="py-12 border-t border-amber-900/30 bg-black/50">
         <div className="max-w-7xl mx-auto text-center px-6">
           <p className="text-amber-200 tracking-wider">The Book Index © {new Date().getFullYear()}</p>
