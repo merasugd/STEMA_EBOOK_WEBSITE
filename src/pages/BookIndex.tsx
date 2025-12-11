@@ -1,5 +1,4 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
 import BookCard from '../components/BookCard';
 import type { Book } from '../types';
 import { safeJsonParse } from '../utils/safeJsonParse';
@@ -7,45 +6,24 @@ import { safeJsonParse } from '../utils/safeJsonParse';
 const PAGE_SIZE = 8;
 
 export default function BookIndex() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
-
   const [books, setBooks] = useState<Record<string, Book>>({});
   const [loading, setLoading] = useState(true);
-
-  // State from URL
-  const searchQuery = searchParams.get('q')?.trim() || '';
-  const sortBy = (searchParams.get('sort') as 'default' | 'title' | 'author' | 'sharedBy') || 'default';
-  const rawContributors = searchParams.get('contributors');
-  const selectedContributors = useMemo(() => {
-    if (!rawContributors) return [];
-    try {
-      return JSON.parse(rawContributors);
-    } catch {
-      return [];
-    }
-  }, [rawContributors]);
-
-  const currentPage = Math.max(1, Number(searchParams.get('page')) || 1);
-
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'default' | 'title' | 'author' | 'sharedBy'>('default');
+  const [selectedContributors, setSelectedContributors] = useState<string[]>([]);
   const [showContributorModal, setShowContributorModal] = useState(false);
   const [contributorSearch, setContributorSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
-<<<<<<< HEAD
-  const hasInitialized = useRef(false);
-
-  // Load all books
-=======
   const hasRestored = useRef(false);
 
->>>>>>> 9b4e1d0a8ab0b1f702c530f1ec0b9c5b12774464
   useEffect(() => {
     let cancelled = false;
 
     async function loadBooks() {
       try {
-        const indexRes = await fetch('db.json');
+        const indexRes = await fetch('/db.json');
         if (!indexRes.ok) throw new Error('Failed to load index');
         const files: string[] = await indexRes.json();
 
@@ -90,42 +68,6 @@ export default function BookIndex() {
     return () => { cancelled = true; };
   }, []);
 
-<<<<<<< HEAD
-  // Sync URL when filters change
-  useEffect(() => {
-    if (loading || hasInitialized.current === false) return;
-
-    const params = new URLSearchParams();
-
-    if (searchQuery) params.set('q', searchQuery);
-    if (sortBy !== 'default') params.set('sort', sortBy);
-    if (selectedContributors.length > 0) {
-      params.set('contributors', JSON.stringify(selectedContributors));
-    }
-    if (currentPage > 1) params.set('page', currentPage.toString());
-
-    // Only update if different to avoid infinite loop
-    const newUrl = `${window.location.pathname}?${params.toString()}`;
-    const currentUrl = `${window.location.pathname}?${searchParams.toString()}`;
-    if (newUrl !== currentUrl) {
-      setSearchParams(params, { replace: true });
-    }
-  }, [searchQuery, sortBy, selectedContributors, currentPage, loading, searchParams, setSearchParams]);
-
-  // Initial load: mark as initialized after first render
-  useEffect(() => {
-    if (!loading) hasInitialized.current = true;
-  }, [loading]);
-
-  // Scroll restoration on page change
-  useEffect(() => {
-    if (!loading) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [currentPage, loading]);
-
-  // Scroll to top button
-=======
   useEffect(() => {
     const save = () => {
       sessionStorage.setItem('bookIndexScroll', window.scrollY.toString());
@@ -173,27 +115,13 @@ export default function BookIndex() {
     if (!loading) window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage]);
 
->>>>>>> 9b4e1d0a8ab0b1f702c530f1ec0b9c5b12774464
   useEffect(() => {
     const onScroll = () => setShowScrollTop(window.scrollY > 500);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-<<<<<<< HEAD
-  // Reset page when filters change
-  useEffect(() => {
-    if (currentPage !== 1) {
-      setSearchParams(prev => {
-        const next = new URLSearchParams(prev);
-        next.delete('page');
-        return next;
-      }, { replace: true });
-    }
-  }, [searchQuery, sortBy, selectedContributors]);
-=======
   useEffect(() => setCurrentPage(1), [searchQuery, sortBy, selectedContributors]);
->>>>>>> 9b4e1d0a8ab0b1f702c530f1ec0b9c5b12774464
 
   const allContributors = useMemo(() => {
     const set = new Set<string>();
@@ -210,7 +138,7 @@ export default function BookIndex() {
   const filteredBooks = useMemo(() => {
     let entries = Object.entries(books);
 
-    if (searchQuery) {
+    if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       entries = entries.filter(([, b]) =>
         `${b.title} ${b.author} ${b.description} ${b.sharedBy || ''}`.toLowerCase().includes(q)
@@ -270,53 +198,6 @@ export default function BookIndex() {
   }, [sortedBookList, sortBy, currentPage]);
 
   const { displayed, currentContributor, totalPages, contributorList } = paginationData;
-<<<<<<< HEAD
-
-  // Handlers
-  const updateSearch = (value: string) => {
-    setSearchParams(prev => {
-      const next = new URLSearchParams(prev);
-      if (value.trim()) next.set('q', value.trim());
-      else next.delete('q');
-      next.delete('page');
-      return next;
-    }, { replace: true });
-  };
-
-  const updateSort = (value: typeof sortBy) => {
-    setSearchParams(prev => {
-      const next = new URLSearchParams(prev);
-      if (value !== 'default') next.set('sort', value);
-      else next.delete('sort');
-      next.delete('page');
-      return next;
-    }, { replace: true });
-  };
-
-  const updateContributors = (contributors: string[]) => {
-    setSearchParams(prev => {
-      const next = new URLSearchParams(prev);
-      if (contributors.length > 0) {
-        next.set('contributors', JSON.stringify(contributors));
-      } else {
-        next.delete('contributors');
-      }
-      next.delete('page');
-      return next;
-    }, { replace: true });
-    setShowContributorModal(false);
-  };
-
-  const goToPage = (page: number) => {
-    setSearchParams(prev => {
-      const next = new URLSearchParams(prev);
-      if (page > 1) next.set('page', page.toString());
-      else next.delete('page');
-      return next;
-    }, { replace: true });
-  };
-=======
->>>>>>> 9b4e1d0a8ab0b1f702c530f1ec0b9c5b12774464
 
   if (loading) {
     return (
@@ -331,11 +212,7 @@ export default function BookIndex() {
 
   return (
     <>
-<<<<<<< HEAD
-      <button onClick={() => navigate('/')} className="fixed top-8 left-8 z-50 flex items-center gap-3 text-amber-300 hover:text-amber-100 transition text-lg tracking-wider uppercase">
-=======
       <button onClick={() => window.location.href = '/'} className="fixed top-8 left-8 z-50 flex items-center gap-3 text-amber-300 hover:text-amber-100 transition text-lg tracking-wider uppercase">
->>>>>>> 9b4e1d0a8ab0b1f702c530f1ec0b9c5b12774464
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
@@ -372,16 +249,12 @@ export default function BookIndex() {
               <input
                 type="text"
                 value={searchQuery}
-<<<<<<< HEAD
-                onChange={e => updateSearch(e.target.value)}
-=======
                 onChange={e => setSearchQuery(e.target.value)}
->>>>>>> 9b4e1d0a8ab0b1f702c530f1ec0b9c5b12774464
                 placeholder="Search by title, author, contributor..."
                 className="w-full py-5 pr-12 pl-3 bg-transparent text-amber-100 placeholder-amber-500/60 focus:outline-none"
               />
               {searchQuery && (
-                <button onClick={() => updateSearch('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-amber-500 hover:text-amber-300">
+                <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-amber-500 hover:text-amber-300">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -398,11 +271,7 @@ export default function BookIndex() {
           <div className="max-w-2xl mx-auto flex gap-4 mb-12">
             <select
               value={sortBy}
-<<<<<<< HEAD
-              onChange={e => updateSort(e.target.value as any)}
-=======
               onChange={e => setSortBy(e.target.value as any)}
->>>>>>> 9b4e1d0a8ab0b1f702c530f1ec0b9c5b12774464
               className="flex-1 px-6 py-5 bg-amber-950/40 border border-amber-800/60 rounded-xl text-amber-100 focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-900/30 backdrop-blur-md"
             >
               <option value="default">Sort by Default</option>
@@ -457,15 +326,8 @@ export default function BookIndex() {
                           type="checkbox"
                           checked={selectedContributors.includes(name)}
                           onChange={e => {
-<<<<<<< HEAD
-                            const newList = e.target.checked
-                              ? [...selectedContributors, name]
-                              : selectedContributors.filter((n: any) => n !== name);
-                            updateContributors(newList);
-=======
                             if (e.target.checked) setSelectedContributors(p => [...p, name]);
                             else setSelectedContributors(p => p.filter(n => n !== name));
->>>>>>> 9b4e1d0a8ab0b1f702c530f1ec0b9c5b12774464
                           }}
                           className="w-5 h-5 text-amber-500 bg-amber-950/50 border-amber-700 rounded focus:ring-amber-500"
                         />
@@ -476,11 +338,7 @@ export default function BookIndex() {
 
                   <div className="flex gap-4 mt-8">
                     <button
-<<<<<<< HEAD
-                      onClick={() => updateContributors([])}
-=======
                       onClick={() => { setSelectedContributors([]); setShowContributorModal(false); }}
->>>>>>> 9b4e1d0a8ab0b1f702c530f1ec0b9c5b12774464
                       className="flex-1 py-4 border border-amber-700/70 text-amber-300 hover:bg-amber-900/30 rounded-xl transition"
                     >
                       Clear All
@@ -528,7 +386,7 @@ export default function BookIndex() {
                 <div className="flex justify-center items-center gap-6 mt-16">
                   <button
                     disabled={currentPage === 1}
-                    onClick={() => goToPage(currentPage - 1)}
+                    onClick={() => setCurrentPage(p => p - 1)}
                     className="px-8 py-3 bg-amber-950/40 border border-amber-800/60 rounded-xl text-amber-100 disabled:opacity-50 hover:bg-amber-900/30 transition"
                   >
                     {sortBy === 'sharedBy' ? 'Previous Contributor' : 'Previous'}
@@ -545,7 +403,7 @@ export default function BookIndex() {
 
                   <button
                     disabled={currentPage === totalPages}
-                    onClick={() => goToPage(currentPage + 1)}
+                    onClick={() => setCurrentPage(p => p + 1)}
                     className="px-8 py-3 bg-amber-950/40 border border-amber-800/60 rounded-xl text-amber-100 disabled:opacity-50 hover:bg-amber-900/30 transition"
                   >
                     {sortBy === 'sharedBy' ? 'Next Contributor' : 'Next'}

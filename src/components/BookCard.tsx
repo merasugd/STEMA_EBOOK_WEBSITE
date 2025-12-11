@@ -35,11 +35,7 @@ function CoverImage({ bookId, customUrl, title, className = "w-full h-80 object-
 
 export default function BookCard({ book, id }: Props) {
   return (
-    <Link 
-        to={`/book/${id}`} 
-        state={{ fromIndex: true }}
-        className="block group"
-      >
+    <Link to={`/book/${id}`} className="block group">
       <div className="aspect-[3/4.5] relative h-full flex flex-col">
         <CoverImage
           bookId={id}
