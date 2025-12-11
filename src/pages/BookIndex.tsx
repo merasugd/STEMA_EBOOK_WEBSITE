@@ -69,26 +69,43 @@ export default function BookIndex() {
   }, []);
 
   useEffect(() => {
-    const save = () => {
-      sessionStorage.setItem('bookIndexScroll', window.scrollY.toString());
-      sessionStorage.setItem('bookIndexPage', currentPage.toString());
-      sessionStorage.setItem('bookIndexSearch', searchQuery);
-      sessionStorage.setItem('bookIndexSort', sortBy);
-      sessionStorage.setItem('bookIndexContributors', JSON.stringify(selectedContributors));
+    if (loading) return;
+
+    let timeout: any;
+
+    const saveScroll = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        sessionStorage.setItem('bookIndexScroll', window.scrollY.toString());
+        sessionStorage.setItem('bookIndexPage', currentPage.toString());
+        sessionStorage.setItem('bookIndexSearch', searchQuery);
+        sessionStorage.setItem('bookIndexSort', sortBy);
+        sessionStorage.setItem('bookIndexContributors', JSON.stringify(selectedContributors));
+      }, 300);
     };
 
-    const onClick = (e: MouseEvent) => {
-      const el = e.target as HTMLElement;
-      if (el.closest('a[href], [href^="/book/"]')) save();
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 500);
+      saveScroll();
     };
 
-    window.addEventListener('beforeunload', save);
-    document.addEventListener('click', onClick);
+    window.addEventListener('scroll', handleScroll);
+    document.addEventListener('visibilitychange', saveScroll);
+
     return () => {
-      window.removeEventListener('beforeunload', save);
-      document.removeEventListener('click', onClick);
+      window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('visibilitychange', saveScroll);
+      clearTimeout(timeout);
     };
-  }, [currentPage, searchQuery, sortBy, selectedContributors]);
+  }, [loading, currentPage, searchQuery, sortBy, selectedContributors]);
+
+  function removeSessionStorage() {
+    sessionStorage.removeItem('bookIndexScroll');
+    sessionStorage.removeItem('bookIndexPage');
+    sessionStorage.removeItem('bookIndexSearch');
+    sessionStorage.removeItem('bookIndexSort');
+    sessionStorage.removeItem('bookIndexContributors');
+  }
 
   useEffect(() => {
     if (loading || hasRestored.current) return;
@@ -99,21 +116,42 @@ export default function BookIndex() {
     const sort = sessionStorage.getItem('bookIndexSort');
     const contribs = sessionStorage.getItem('bookIndexContributors');
 
-    if (page) setCurrentPage(Number(page) || 1);
+    let restored = false;
+
+    if (page) {
+      const p = Number(page);
+      if (p > 0) {
+        setTimeout(() => setCurrentPage(p), 200);
+        restored = true;
+      }
+    }
     if (search !== null) setSearchQuery(search);
     if (sort) setSortBy(sort as any);
-    if (contribs) setSelectedContributors(JSON.parse(contribs));
-
-    if (scroll && Number(scroll) > 0) {
-      requestAnimationFrame(() => window.scrollTo(0, Number(scroll)));
+    if (contribs) {
+      try {
+        setSelectedContributors(JSON.parse(contribs));
+      } catch {}
     }
 
-    hasRestored.current = true;
-  }, [loading]);
+    if (scroll && Number(scroll) > 0 && restored) {
+      const targetY = Number(scroll);
+      setTimeout(() => {
+        window.scrollTo(0, targetY);
+      }, 100);
+    }
 
-  useEffect(() => {
-    if (!loading) window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentPage]);
+    let anythingRestored = false;
+
+    if (page && Number(page) > 1) anythingRestored = true;
+    if (search) anythingRestored = true;
+    if (sort && sort !== 'default') anythingRestored = true;
+    if (contribs && JSON.parse(contribs).length > 0) anythingRestored = true;
+    if (scroll && Number(scroll) > 500) anythingRestored = true;
+
+    hasRestored.current = true;
+
+    if (anythingRestored) removeSessionStorage()
+  }, [loading]); 
 
   useEffect(() => {
     const onScroll = () => setShowScrollTop(window.scrollY > 500);
@@ -212,7 +250,7 @@ export default function BookIndex() {
 
   return (
     <>
-      <button onClick={() => window.location.href = '/'} className="fixed top-8 left-8 z-50 flex items-center gap-3 text-amber-300 hover:text-amber-100 transition text-lg tracking-wider uppercase">
+      <button onClick={() => { window.location.href = '/'; removeSessionStorage() }} className="fixed top-8 left-8 z-50 flex items-center gap-3 text-amber-300 hover:text-amber-100 transition text-lg tracking-wider uppercase">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
@@ -386,7 +424,7 @@ export default function BookIndex() {
                 <div className="flex justify-center items-center gap-6 mt-16">
                   <button
                     disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(p => p - 1)}
+                    onClick={() => { setCurrentPage(p => p - 1); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
                     className="px-8 py-3 bg-amber-950/40 border border-amber-800/60 rounded-xl text-amber-100 disabled:opacity-50 hover:bg-amber-900/30 transition"
                   >
                     {sortBy === 'sharedBy' ? 'Previous Contributor' : 'Previous'}
@@ -403,7 +441,7 @@ export default function BookIndex() {
 
                   <button
                     disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(p => p + 1)}
+                    onClick={() => { setCurrentPage(p => p + 1); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
                     className="px-8 py-3 bg-amber-950/40 border border-amber-800/60 rounded-xl text-amber-100 disabled:opacity-50 hover:bg-amber-900/30 transition"
                   >
                     {sortBy === 'sharedBy' ? 'Next Contributor' : 'Next'}
