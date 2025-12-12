@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
 import BookIndex from './pages/BookIndex';
 import BookInfo from './pages/BookInfo';
-import NotFound from './pages/NotFound'; // Add this import (create the file as provided earlier)
+import NotFound from './pages/NotFound';
 import { useEffect } from 'react';
 
 function App() {
