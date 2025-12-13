@@ -457,7 +457,7 @@ export default function BookIndex() {
       <footer className="py-12 border-t border-amber-900/30 bg-black/50">
         <Link to="/what?h=yourenotsupposedtobehere"><div className="max-w-7xl mx-auto text-center px-6">
           <p className="text-amber-200 tracking-wider">The Book Index © {new Date().getFullYear()}</p>
-          <p className="text-amber-400/70 text-sm mt-2">Read, Reflect, Repeat.</p>
+          <p className="text-amber-400/70 text-sm mt-2 cursor-pointer select-none transition-all hover:scale-105 active:scale-95">Read, Reflect, Repeat.</p>
         </div></Link>
       </footer>
 

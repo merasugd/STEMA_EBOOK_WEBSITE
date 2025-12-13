@@ -91,7 +91,7 @@ function EasterPage() {
       return () => {
         audio.pause();
       };
-    } else {
+    } else if(outcome === 'cute') {
       const audio = new Audio('/easter/cutesy.mp3');
       audio.volume = 0.7;
       audio.loop = true;
