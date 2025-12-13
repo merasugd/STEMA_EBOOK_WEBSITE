@@ -59,3 +59,14 @@ button {
 .btn-primary {
   @apply bg-amber-700 text-white font-semibold rounded-lg hover:bg-amber-800 transition;
 }
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

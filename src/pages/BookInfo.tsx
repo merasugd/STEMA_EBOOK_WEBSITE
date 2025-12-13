@@ -66,6 +66,19 @@ export default function BookInfo() {
     );
   }
 
+  const [clickCount, setClickCount] = useState(0);
+
+  useEffect(() => {
+    if (clickCount >= 5) {
+      setClickCount(0);
+      window.location.href = '/what?h=yourenotsupposedtobehere';
+    }
+  }, [clickCount]);
+
+  const handleSecretClick = () => {
+    setClickCount(prev => prev + 1);
+  };
+
   if (!book) {
     return (
       <div className="min-h-screen bg-black text-amber-100 overflow-x-hidden relative flex flex-col items-center justify-center">
@@ -75,7 +88,7 @@ export default function BookInfo() {
         />
 
         <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
-          <h1 className="text-9xl md:text-[12rem] font-bold text-amber-900/40 tracking-tight leading-none">
+          <h1 onClick={handleSecretClick} className="text-9xl md:text-[12rem] font-bold text-amber-900/40 tracking-tight leading-none">
             404
           </h1>
 

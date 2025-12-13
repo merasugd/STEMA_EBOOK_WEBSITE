@@ -4,6 +4,7 @@ import BookIndex from './pages/BookIndex';
 import BookInfo from './pages/BookInfo';
 import NotFound from './pages/NotFound';
 import { useEffect } from 'react';
+import EasterPage from './components/Any';
 
 function App() {
   function ScrollToTop() {
@@ -21,6 +22,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/bookindex" element={<BookIndex />} />
         <Route path="/book/:id" element={<BookInfo />} />
+        <Route path="/what" element={<EasterPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

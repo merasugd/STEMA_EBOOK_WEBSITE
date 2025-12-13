@@ -1,6 +1,20 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 export default function NotFound() {
+  const [clickCount, setClickCount] = useState(0);
+
+  useEffect(() => {
+    if (clickCount >= 5) {
+      setClickCount(0);
+      window.location.href = '/what?h=yourenotsupposedtobehere';
+    }
+  }, [clickCount]);
+
+  const handleSecretClick = () => {
+    setClickCount(prev => prev + 1);
+  };
+
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center text-center px-6 relative"
@@ -9,7 +23,7 @@ export default function NotFound() {
       }}
     >
 
-      <h1 className="text-8xl md:text-9xl font-bold mb-4 text-[#6b5a3d] tracking-tighter">
+      <h1 onClick={handleSecretClick} className="text-8xl md:text-9xl font-bold mb-4 text-[#6b5a3d] tracking-tighter">
         404
       </h1>
 
