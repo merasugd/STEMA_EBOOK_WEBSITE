@@ -65,10 +65,10 @@ function EasterPage() {
 
   const handleClickMe = () => {
     setUserInteracted(true);
-    if (Math.random() < 0.5) {
-      setOutcome('jumpscare');
-    } else {
+    if (Math.random() < 0.1) {
       setOutcome('cute');
+    } else {
+      setOutcome('jumpscare');
     }
   };
 
