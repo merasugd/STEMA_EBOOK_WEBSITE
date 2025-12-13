@@ -21,7 +21,6 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/bookindex" element={<BookIndex />} />
         <Route path="/book/:id" element={<BookInfo />} />
-        {/* Catch-all for 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
