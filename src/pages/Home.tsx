@@ -15,30 +15,27 @@ export default function Home() {
         “The more that you read, the more things you will know.” — Dr. Seuss
       </p>
 
-      {/* Button + QR Code Section */}
       <div className="flex flex-col md:flex-row items-center gap-12 mb-12">
-        {/* Button */}
         <Link to="/bookindex">
           <button className="btn-primary text-2xl px-12 py-6 shadow-2xl hover:shadow-3xl transition-shadow">
             Open Book Index
           </button>
         </Link>
 
-        {/* QR Code + URL */}
         <div className="flex flex-col items-center">
           <img
             src="/images/qrcode.png"
             alt="QR code to Book Index"
             className="w-48 h-48 md:w-56 md:h-56 shadow-lg rounded-lg border-4 border-white"
           />
-          <p className="mt-4 text-lg font-medium text-[#6b5a3d] break-all">
-            https://stemabookindex.vercel.app
-            {/* Replace with your actual URL */}
-          </p>
+          <Link to='https://stemabookindex.vercel.app'>
+            <p className="mt-4 text-lg font-medium text-[#6b5a3d] break-all">
+              https://stemabookindex.vercel.app
+            </p>
+          </Link>
         </div>
       </div>
 
-      {/* Footer */}
       <footer className="absolute bottom-8 text-lg text-[#6b5a3d]">
         <p>Made by: <strong>Meras and The STEM A</strong></p>
         <p>Project by: <strong>11-STEM-A</strong></p>

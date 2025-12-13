@@ -68,8 +68,56 @@ export default function BookInfo() {
 
   if (!book) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center overflow-x-hidden">
-        <div className="text-amber-400 text-3xl">This tome appears to be missing...</div>
+      <div className="min-h-screen bg-black text-amber-100 overflow-x-hidden relative flex flex-col items-center justify-center">
+        <div
+          className="fixed inset-0 bg-cover bg-center opacity-20 pointer-events-none"
+          style={{ backgroundImage: 'url(/images/bg2.jpg)', backgroundAttachment: 'fixed' }}
+        />
+
+        <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
+          <h1 className="text-9xl md:text-[12rem] font-bold text-amber-900/40 tracking-tight leading-none">
+            404
+          </h1>
+
+          <p className="text-4xl md:text-5xl font-light text-amber-300 mt-8 mb-6">
+            This tome appears to be missing...
+          </p>
+
+          <p className="text-2xl md:text-3xl italic text-amber-400 mb-12 max-w-2xl mx-auto leading-relaxed">
+            “The book you seek has wandered off the shelves,<br />
+            perhaps borrowed by another curious soul.”
+          </p>
+
+          <Link
+            to="/bookindex"
+            className="inline-flex items-center gap-3 text-amber-300 hover:text-amber-100 transition text-xl tracking-wider uppercase"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Return to the Book Index
+          </Link>
+
+          <div className="mt-20 flex flex-col items-center">
+            <img
+              src="/images/qrcode.png"
+              alt="QR code to Book Index"
+              className="w-48 h-48 md:w-56 md:h-56 shadow-lg rounded-lg border-4 border-amber-900/30"
+            />
+            <a
+              href="https://stemabookindex.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 text-lg font-medium text-amber-300 hover:underline"
+            >
+              https://stemabookindex.vercel.app
+            </a>
+          </div>
+
+          <footer className="mt-24 text-amber-400/80 text-center text-sm uppercase tracking-widest">
+            <p>The Book Index — Read, Reflect, Repeat.</p>
+          </footer>
+        </div>
       </div>
     );
   }
