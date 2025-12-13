@@ -23,7 +23,7 @@ export default function NotFound() {
       }}
     >
 
-      <h1 onClick={handleSecretClick} className="text-8xl md:text-9xl font-bold mb-4 text-[#6b5a3d] tracking-tighter">
+      <h1 onClick={handleSecretClick} className="text-8xl md:text-9xl font-bold mb-4 text-[#6b5a3d] tracking-tighter cursor-pointer select-none transition-all hover:scale-105 active:scale-95">
         404
       </h1>
 

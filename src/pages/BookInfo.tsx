@@ -34,6 +34,7 @@ export default function BookInfo() {
   const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
   const [animate, setAnimate] = useState(false);
+  const [clickCount, setClickCount] = useState(0);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -56,7 +57,16 @@ export default function BookInfo() {
       }
     }
     loadBook();
-  }, [id]);
+
+    if (clickCount >= 5) {
+      setClickCount(0);
+      window.location.href = '/what?h=yourenotsupposedtobehere';
+    }
+  }, [id, clickCount]);
+
+  const handleSecretClick = () => {
+    setClickCount(prev => prev + 1);
+  };
 
   if (loading) {
     return (
@@ -65,19 +75,6 @@ export default function BookInfo() {
       </div>
     );
   }
-
-  const [clickCount, setClickCount] = useState(0);
-
-  useEffect(() => {
-    if (clickCount >= 5) {
-      setClickCount(0);
-      window.location.href = '/what?h=yourenotsupposedtobehere';
-    }
-  }, [clickCount]);
-
-  const handleSecretClick = () => {
-    setClickCount(prev => prev + 1);
-  };
 
   if (!book) {
     return (
@@ -88,7 +85,7 @@ export default function BookInfo() {
         />
 
         <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
-          <h1 onClick={handleSecretClick} className="text-9xl md:text-[12rem] font-bold text-amber-900/40 tracking-tight leading-none">
+          <h1 onClick={handleSecretClick} className="text-9xl md:text-[12rem] font-bold text-amber-900/40 tracking-tight leading-none cursor-pointer select-none transition-all hover:scale-105 active:scale-95">
             404
           </h1>
 
