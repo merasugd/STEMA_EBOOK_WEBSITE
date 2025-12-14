@@ -74,7 +74,7 @@ function EasterPage() {
 
   const handleAcceptFate = () => {
     alert("Your soul has been archived. Welcome to eternity.");
-    window.location.href = '/';
+    window.location.href = 'https://www.linkedin.com/';
   };
 
   const handleCuteClose = () => {
